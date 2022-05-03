@@ -88,12 +88,13 @@ def get_lines(img):
             pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
             pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
             xys.append([pt1, pt2])
-            cv2.line(plot, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
+            cv2.line(plot, pt1, pt2, (255, 0, 0), 1, cv2.LINE_AA)
 
         # plots the intersections
         for i in intersections:
             x0 = i[0]
             y0 = i[1]
             
-            cv2.circle(plot, (int(x0), int(y0)), radius=10, color=(255, 0, 0), thickness=-1)
+            cv2.circle(plot, (int(x0), int(y0)), radius=10, color=(0, 255, 0), thickness=-1)
+            cv2.circle(plot, (int(x0), int(y0)), radius=10, color=(0, 0, 255), thickness=2)
     return plot

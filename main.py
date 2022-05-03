@@ -19,7 +19,8 @@ edges = None
 while(True):
     # read live video feed
     # _, frame = vid.read()
-    frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
+    # frame = np.flip(io.imread('test.jpeg'), axis=-1) # google image
+    frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
 
     # crop to square
     if frame.shape[1] > frame.shape[0]:
@@ -45,6 +46,9 @@ while(True):
     # captures photo and gets processed plot
     elif key == ord(' '):
         last_cap = imgprocess.get_lines(frame)
+    # save img
+    elif key == ord('s'):
+        cv2.imwrite('savetest.jpg', frame)
 
 # quit program release cap obj and destroy windows
 vid.release()
