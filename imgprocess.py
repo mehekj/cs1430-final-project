@@ -10,6 +10,7 @@ DEGREE = np.pi/180
 handles the actual computer vision part
 '''
 
+# gets intersections between two lines
 def get_line_intersection(line1, line2):
     rho1 = line1[0]
     theta1 = line1[1]
@@ -27,6 +28,7 @@ def get_line_intersection(line1, line2):
     return None
 
 
+# gets the intersection points of all the lines
 def get_intersection_points(horizontals, verticals):
     intersections = []
     for horiz in horizontals:
@@ -68,6 +70,7 @@ def get_lines(img):
     plot = np.stack((img,) * 3, axis=-1)
     xys = []
     if lines is not None:
+        # filters out lines that aren't close enough
         intersections = get_intersection_points(horizontals, verticals)
         intersections = list(filter(lambda point : 
             point[0][0] >= 0 and point[0][0] < plot.shape[1] and point[0][1] >= 0 and point[0][1] < plot.shape[0]
@@ -87,6 +90,7 @@ def get_lines(img):
             xys.append([pt1, pt2])
             cv2.line(plot, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
 
+        # plots the intersections
         for i in intersections:
             x0 = i[0]
             y0 = i[1]
