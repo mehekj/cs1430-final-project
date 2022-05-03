@@ -7,7 +7,7 @@ from skimage.color import rgb2gray
 handles the actual computer vision part
 '''
 
-
+# gets intersections between two lines
 def get_line_intersection(line1, line2):
     rho1 = line1[0]
     theta1 = line1[1]
@@ -24,7 +24,7 @@ def get_line_intersection(line1, line2):
         return [[x0, y0]]
     return None
 
-
+# gets the intersection points of all the lines
 def get_intersection_points(lines):
     intersections = []
     for i, group in enumerate(lines[:-1]):
@@ -51,6 +51,8 @@ def get_lines(img):
     xys = []
     if lines is not None:
         intersections = get_intersection_points(lines)
+        
+        # filters out lines that aren't close enough
         intersections = filter(lambda point : 
             point[0][0] >= 0 and point[0][0] < plot.shape[1] and point[0][1] >= 0 and point[0][1] < plot.shape[0]
         , intersections)
@@ -67,6 +69,7 @@ def get_lines(img):
             xys.append([pt1, pt2])
             cv2.line(plot, pt1, pt2, (0, 0, 255), 1, cv2.LINE_AA)
 
+        # plots the intersections
         for i in list(intersections):
             x0 = i[0][0]
             y0 = i[0][1]
