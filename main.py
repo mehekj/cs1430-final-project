@@ -23,6 +23,8 @@ while(True):
     frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
 
     # crop to square
+    cropx = 0
+    cropy = 0
     if frame.shape[1] > frame.shape[0]:
         cropx = int((frame.shape[1] - frame.shape[0])/2)
         cropy = 0

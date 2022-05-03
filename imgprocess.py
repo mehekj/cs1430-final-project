@@ -24,7 +24,7 @@ def get_line_intersection(line1, line2):
     if (np.linalg.det(A) != 0):
         x0, y0 = np.linalg.solve(A, b)
         x0, y0 = int(np.round(x0)), int(np.round(y0))
-        return [[x0, y0]]
+        return [x0, y0]
     return None
 
 
@@ -40,6 +40,11 @@ def get_intersection_points(horizontals, verticals):
 
 """classify lines as horizontal or vertical """
 
+def cluster_lines(lines, clusters=9):
+    features = np.array(lines)
+    kmeans = MiniBatchKMeans(n_clusters=clusters, max_iter=500).fit(features)
+    return np.ndarray.tolist(kmeans.cluster_centers_)
+
 def separate_lines(lines, threshold = DEGREE * 5):
     horizontals = []
     verticals = []
@@ -49,10 +54,12 @@ def separate_lines(lines, threshold = DEGREE * 5):
             verticals.append(line[0])
         elif abs(theta - DEGREE*90) <= threshold:
             horizontals.append(line[0])
+    horizontals = cluster_lines(horizontals)
+    verticals = cluster_lines(verticals)
     return horizontals + verticals, horizontals, verticals
 
 def cluster_points(intersections):
-    features = np.squeeze(np.array(intersections), axis=1)
+    features = np.array(intersections)
     kmeans = MiniBatchKMeans(n_clusters=81, max_iter=500).fit(features)
     return np.ndarray.tolist(kmeans.cluster_centers_)
 
@@ -73,10 +80,10 @@ def get_lines(img):
         # filters out lines that aren't close enough
         intersections = get_intersection_points(horizontals, verticals)
         intersections = list(filter(lambda point : 
-            point[0][0] >= 0 and point[0][0] < plot.shape[1] and point[0][1] >= 0 and point[0][1] < plot.shape[0]
+            point[0] >= 0 and point[0] < plot.shape[1] and point[1] >= 0 and point[1] < plot.shape[0]
         , intersections))
 
-        intersections = cluster_points(intersections)
+        # intersections = cluster_points(intersections)
 
         for i in range(0, len(lines)):
             rho = lines[i][0]
