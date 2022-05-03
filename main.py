@@ -18,8 +18,8 @@ edges = None
   
 while(True):
     # read live video feed
-    _, frame = vid.read()
-    # frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
+    # _, frame = vid.read()
+    frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
 
     # crop to square
     if frame.shape[1] > frame.shape[0]:
