@@ -26,10 +26,11 @@ while(True):
     if frame.shape[1] > frame.shape[0]:
         cropx = int((frame.shape[1] - frame.shape[0])/2)
         cropy = 0
+        frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
     elif frame.shape[0] > frame.shape[1]:
         cropx = 0
         cropy = int((frame.shape[0] - frame.shape[1])/2)
-    frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
+        frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
   
     # adds processed captured photo to window next to live cam feed
     new_frame = frame
@@ -48,7 +49,7 @@ while(True):
         last_cap = imgprocess.get_lines(frame)
     # save img
     elif key == ord('s'):
-        cv2.imwrite('savetest.jpg', frame)
+        cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
 
 # quit program release cap obj and destroy windows
 vid.release()
