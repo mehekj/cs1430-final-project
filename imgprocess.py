@@ -52,9 +52,14 @@ def separate_lines(lines, threshold = DEGREE * 5):
     return horizontals + verticals, horizontals, verticals
 
 def cluster_points(intersections):
+    all_points = []
     features = np.squeeze(np.array(intersections), axis=1)
-    kmeans = MiniBatchKMeans(n_clusters=81, max_iter=500).fit(features)
-    return np.ndarray.tolist(kmeans.cluster_centers_)
+    centers = np.zeros((0, 0))
+    for i in range(10):
+        kmeans = MiniBatchKMeans(n_clusters=81, max_iter=200).fit(features)
+        centers = np.concatenate((centers, kmeans.cluster_centers_))
+    final_kmeans = MiniBatchKMeans(n_clusters=81, max_iter=200).fit(centers)
+    return np.ndarray.tolist(final_kmeans.cluster_centers_)
 
 def get_lines(img):
     # convert to grayscale, blur, then get canny edges
