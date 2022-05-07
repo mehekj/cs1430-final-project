@@ -54,7 +54,7 @@ def separate_lines(lines, threshold = DEGREE * 20):
     return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
 
-def combine_lines(lines, rho_threshold=50, theta_threshold=np.pi / 3):
+def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi / 6):
     best_lines = np.zeros((18, 2))
     count = 0
     for i in range(lines.shape[0]):
@@ -66,6 +66,9 @@ def combine_lines(lines, rho_threshold=50, theta_threshold=np.pi / 3):
         else:
             if rho < 0:
                 rho *= -1
+                lines[i][0] *= -1
+                theta -= np.pi
+                lines[i][1] -= np.pi
             closeness_rho = np.isclose(rho, best_lines[0:count, 0], atol=rho_threshold)
             closeness_theta = np.isclose(theta, best_lines[0:count, 1], atol=theta_threshold)
             closeness = np.all([closeness_rho, closeness_theta], axis=0)
@@ -73,6 +76,8 @@ def combine_lines(lines, rho_threshold=50, theta_threshold=np.pi / 3):
                 best_lines[count] = lines[i]
                 count += 1
 
+
+    # print(best_lines)
     return best_lines
     
 
@@ -90,7 +95,7 @@ def get_lines(img):
     edges = cv2.Canny(img, 50, 200)
 
     # get hough transform lines
-    lines = cv2.HoughLines(edges, 0.8, np.pi / 180, 125, None)
+    lines = cv2.HoughLines(edges, 1, np.pi / 180, 100, None)
     return np.squeeze(lines, axis=1)
 
 
@@ -125,10 +130,11 @@ def plot_points(img, points):
 def get_board_corners(img):
     lines = get_lines(img)
     if lines is not None:
+        plot = plot_lines(img, lines)
         lines = combine_lines(lines)
         intersections = get_intersection_points(lines)
         intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
         # corners = cluster_points(intersections)
-        plot = plot_points(plot_lines(img, lines), intersections)
+        plot = plot_points(plot_lines(plot, lines, color=(255, 255, 255)), intersections)
         return plot
     return None
