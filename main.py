@@ -17,10 +17,12 @@ last_cap = None
 edges = None
   
 while(True):
-    # read live video feed
-    # _, frame = vid.read()
-    # frame = np.flip(io.imread('test.jpeg'), axis=-1) # google image
+    # _, frame = vid.read() # read live video feed
     frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
+
+    if frame is None:
+        print("no camera input")
+        break
 
     # crop to square
     cropx = 0
@@ -47,7 +49,7 @@ while(True):
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        last_cap = imgprocess.get_lines(frame)
+        last_cap = imgprocess.get_board_corners(frame)
     # save img
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
