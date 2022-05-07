@@ -98,6 +98,9 @@ class Board:
             self.turn = Turn.WHITE
         self.verify_board()
 
+    def display_board(self):
+        print(self.board)
+
     def verify_board(self):
         for i in range(8):
             for j in range(8):
@@ -109,3 +112,4 @@ class Board:
                 elif current_piece==Piece.BK or current_piece==Piece.BQ or current_piece==Piece.BR or current_piece==Piece.BB or current_piece==Piece.BN or current_piece==Piece.BP:
                     Assert(self.filled_board[i][j]==2)
         print("Board seems good!")
+        self.display_board()
