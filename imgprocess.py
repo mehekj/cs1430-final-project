@@ -40,10 +40,10 @@ def get_intersection_points(horizontals, verticals):
 
 """classify lines as horizontal or vertical """
 
-def cluster_lines(lines, clusters=9):
-    features = np.array(lines)
-    kmeans = MiniBatchKMeans(n_clusters=clusters, max_iter=500).fit(features)
-    return np.ndarray.tolist(kmeans.cluster_centers_)
+# def cluster_lines(lines, clusters=9):
+#     features = np.array(lines)
+#     kmeans = MiniBatchKMeans(n_clusters=clusters, max_iter=500).fit(features)
+#     return np.ndarray.tolist(kmeans.cluster_centers_)
 
 def separate_lines(lines, threshold = DEGREE * 5):
     horizontals = []
@@ -54,8 +54,8 @@ def separate_lines(lines, threshold = DEGREE * 5):
             verticals.append(line[0])
         elif abs(theta - DEGREE*90) <= threshold:
             horizontals.append(line[0])
-    horizontals = cluster_lines(horizontals)
-    verticals = cluster_lines(verticals)
+    # horizontals = cluster_lines(horizontals)
+    # verticals = cluster_lines(verticals)
     return horizontals + verticals, horizontals, verticals
 
 def cluster_points(intersections):
@@ -83,7 +83,7 @@ def get_lines(img):
             point[0] >= 0 and point[0] < plot.shape[1] and point[1] >= 0 and point[1] < plot.shape[0]
         , intersections))
 
-        # intersections = cluster_points(intersections)
+        intersections = cluster_points(intersections)
 
         for i in range(0, len(lines)):
             rho = lines[i][0]

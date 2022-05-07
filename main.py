@@ -28,11 +28,10 @@ while(True):
     if frame.shape[1] > frame.shape[0]:
         cropx = int((frame.shape[1] - frame.shape[0])/2)
         cropy = 0
-        frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
     elif frame.shape[0] > frame.shape[1]:
         cropx = 0
         cropy = int((frame.shape[0] - frame.shape[1])/2)
-        frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
+    frame = frame[cropy:frame.shape[0] - cropy, cropx:frame.shape[1] - cropx]
   
     # adds processed captured photo to window next to live cam feed
     new_frame = frame
