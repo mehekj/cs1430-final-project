@@ -17,8 +17,8 @@ last_cap = None
 edges = None
   
 while(True):
-    _, frame = vid.read() # read live video feed
-    # frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
+    # _, frame = vid.read() # read live video feed
+    frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
 
     if frame is None:
         print("no camera input")

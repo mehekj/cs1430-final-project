@@ -28,19 +28,16 @@ def get_line_intersection(line1, line2):
         return np.array([x0, y0])
     return None
 
-
 # gets the intersection points of all the lines
-def get_intersection_points(lines):
+def get_intersection_points(horizontals, verticals):
     intersections = []
-    for line1 in lines:
-        for line2 in lines:
-            if not (line1[0] == line2[0] and line1[1] == line2[1]):
-                point = get_line_intersection(line1, line2)
-                if point is not None:
-                    intersections.append(point)
+    for line1 in horizontals:
+        for line2 in verticals:
+            point = get_line_intersection(line1, line2)
+            if point is not None:
+                intersections.append(point)
     return np.array(intersections)
 
-"""classify lines as horizontal or vertical """
 def separate_lines(lines, threshold = DEGREE * 20):
     horizontals = []
     verticals = []
@@ -53,7 +50,7 @@ def separate_lines(lines, threshold = DEGREE * 20):
     return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
 
-def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi / 6):
+def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi/6):
     best_lines = np.zeros((18, 2))
     count = 0
     for i in range(lines.shape[0]):
@@ -75,17 +72,12 @@ def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi / 6):
                 best_lines[count] = lines[i]
                 count += 1
 
-
-    # print(best_lines)
     return best_lines
     
-
-
 def cluster_points(intersections):
     features = np.array(intersections)
     kmeans = MiniBatchKMeans(n_clusters=81, max_iter=500).fit(features)
     return np.ndarray.tolist(kmeans.cluster_centers_)
-
 
 def get_lines(img):
     # convert to grayscale, blur, then get canny edges
@@ -96,7 +88,6 @@ def get_lines(img):
     # get hough transform lines
     lines = cv2.HoughLines(edges, 1, np.pi / 180, 100, None)
     return np.squeeze(lines, axis=1)
-
 
 def plot_lines(img, lines, color=(255, 0, 0)):
     img = np.array(img)
@@ -113,7 +104,6 @@ def plot_lines(img, lines, color=(255, 0, 0)):
     
     return img
 
-
 def plot_points(img, points):
     for i in points:
         x0 = i[0]
@@ -125,15 +115,53 @@ def plot_points(img, points):
     
     return img
 
+def get_intersection_matrix(points):
+    points = points[points[:, 1].argsort()]
+    matrix = np.reshape(points, (9, 9, 2))
+    for i in range(matrix.shape[0]):
+        matrix[i, :, :] = matrix[i, :, :][matrix[i, :, :][:, 0].argsort()]
+    return matrix
+
+def warp_image(img, matrix):
+    orig_coords = np.float32([matrix[0, 0, :], matrix[0, -1, :], matrix[-1, 0, :], matrix[-1, -1, :]])
+    new_coords = np.float32([[0, 0], [img.shape[0], 0], [0, img.shape[1]], [img.shape[0], img.shape[1]]])
+    transform_mat = cv2.getPerspectiveTransform(orig_coords, new_coords)
+    warped_img = cv2.warpPerspective(img, transform_mat, img.shape[:2])
+    
+    #just for a sanity check, checking to see where the matrix points get mapped... not working atm
+    warped_mtx = np.zeros((9, 9, 2))
+    for i in range(9):
+        for j in range(9):
+            print(np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0))
+            warped_mtx[i, j, :] = np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0)
+    
+    return warped_img, warped_mtx
+
+def get_features(img, matrix):
+    warped_img, warped_mtx = warp_image(img, matrix)
+    for i in range(8):
+        for j in range(8):
+            p1 = matrix[i, j, :]
+            p2 = matrix[i, j+1, :]
+            p3 = matrix[i+1, j, :]
+            p4 = matrix[i+1, j+1, :]
+            center = (p1 + p2 + p3 + p4) / 4
+
+            (np.abs(p1 - center) + np.abs(p2 - center) + np.abs(p3 - center) + np.abs(p4 - center)) / 4
 
 def get_board_corners(img):
     lines = get_lines(img)
     if lines is not None:
         plot = plot_lines(img, lines)
         lines = combine_lines(lines)
-        intersections = get_intersection_points(lines)
+        lines, horizontals, verticals = separate_lines(lines)
+        intersections = get_intersection_points(horizontals, verticals)
         intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
         # corners = cluster_points(intersections)
+        intersection_matrix = get_intersection_matrix(intersections)
+        # features = get_features(img, intersection_matrix)
         plot = plot_points(plot_lines(plot, lines, color=(255, 255, 255)), intersections)
+        # warped_img, warped_mtx = warp_image(img, intersection_matrix)
+        # plot = plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
         return plot
     return None
