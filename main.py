@@ -12,13 +12,13 @@ handles IMG CAPTURE and USER CONTROLS
 '''
   
 # define a video capture object
-vid = cv2.VideoCapture(0)
+vid = cv2.VideoCapture(1)
 last_cap = None
 edges = None
   
 while(True):
-    # _, frame = vid.read() # read live video feed
-    frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
+    _, frame = vid.read() # read live video feed
+    # frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
 
     if frame is None:
         print("no camera input")
@@ -49,7 +49,7 @@ while(True):
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        last_cap = imgprocess.get_board_corners(frame)
+        last_cap = imgprocess.get_board_state(frame)
     # save img
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))

@@ -1,5 +1,6 @@
 import math
 import cv2
+from cv2 import transform
 import numpy as np
 from skimage.color import rgb2gray
 from sklearn.cluster import MiniBatchKMeans
@@ -10,6 +11,27 @@ DEGREE = np.pi/180
 '''
 handles the actual computer vision part
 '''
+
+
+'''
+first click: take calibration img of empty board
+do full calculations -> lines, points, normalization, center point etc.
+store a matrix of points used for comparison
+second click: full board setup
+do full calculations
+get difference of points vs calibration
+rank diffs and take top 32 and define threshold based on that
+
+every image after
+do full calculations
+get diffs
+if abs(diff) is above threshold that cell is filled
+based on pos or neg threshold set color
+return matrix of 0,1,2 to main.py to pass to game
+'''
+
+calibration_feats = None
+diff_threshold = None
 
 # gets intersections between two lines
 def get_line_intersection(line1, line2):
@@ -38,6 +60,7 @@ def get_intersection_points(horizontals, verticals):
                 intersections.append(point)
     return np.array(intersections)
 
+# separates lines into horizontal and vertical lines, also filters out diagonals
 def separate_lines(lines, threshold = DEGREE * 20):
     horizontals = []
     verticals = []
@@ -49,8 +72,8 @@ def separate_lines(lines, threshold = DEGREE * 20):
             horizontals.append(line)
     return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
-
-def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi/6):
+# takes the best 18 distinct lines from many overlapping
+def combine_lines(lines, rho_threshold=50, theta_threshold=np.pi / 6):
     best_lines = np.zeros((18, 2))
     count = 0
     for i in range(lines.shape[0]):
@@ -73,12 +96,14 @@ def combine_lines(lines, rho_threshold=30, theta_threshold=np.pi/6):
                 count += 1
 
     return best_lines
-    
+
+# uses kmeans to find corner cluster centers (did not work)
 def cluster_points(intersections):
     features = np.array(intersections)
     kmeans = MiniBatchKMeans(n_clusters=81, max_iter=500).fit(features)
     return np.ndarray.tolist(kmeans.cluster_centers_)
 
+# gets hough lines from image
 def get_lines(img):
     # convert to grayscale, blur, then get canny edges
     img = np.uint8(255 * rgb2gray(img))
@@ -89,6 +114,7 @@ def get_lines(img):
     lines = cv2.HoughLines(edges, 1, np.pi / 180, 100, None)
     return np.squeeze(lines, axis=1)
 
+# plots lines on image
 def plot_lines(img, lines, color=(255, 0, 0)):
     img = np.array(img)
     for i in range(0, len(lines)):
@@ -104,6 +130,7 @@ def plot_lines(img, lines, color=(255, 0, 0)):
     
     return img
 
+# plots points on image
 def plot_points(img, points):
     for i in points:
         x0 = i[0]
@@ -115,6 +142,7 @@ def plot_points(img, points):
     
     return img
 
+# puts found board corners into ordered grid matrix
 def get_intersection_matrix(points):
     points = points[points[:, 1].argsort()]
     matrix = np.reshape(points, (9, 9, 2))
@@ -122,6 +150,7 @@ def get_intersection_matrix(points):
         matrix[i, :, :] = matrix[i, :, :][matrix[i, :, :][:, 0].argsort()]
     return matrix
 
+# warps board to square using corners
 def warp_image(img, matrix):
     orig_coords = np.float32([matrix[0, 0, :], matrix[0, -1, :], matrix[-1, 0, :], matrix[-1, -1, :]])
     new_coords = np.float32([[0, 0], [img.shape[0], 0], [0, img.shape[1]], [img.shape[0], img.shape[1]]])
@@ -132,36 +161,74 @@ def warp_image(img, matrix):
     warped_mtx = np.zeros((9, 9, 2))
     for i in range(9):
         for j in range(9):
-            print(np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0))
-            warped_mtx[i, j, :] = np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0)
+            # print(np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0))
+            # warped_mtx[i, j, :] = np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0)
+            p = matrix[i, j]
+            warped_mtx[i, j, 0] = int((transform_mat[0][0] * p[0] + transform_mat[0][1] * p[1] + transform_mat[0][2]) / ((transform_mat[2][0] * p[0] + transform_mat[2][1] * p[1] + transform_mat[2][2])))
+            warped_mtx[i, j, 1] = int((transform_mat[1][0] * p[0] + transform_mat[1][1] * p[1] + transform_mat[1][2]) / ((transform_mat[2][0] * p[0] + transform_mat[2][1] * p[1] + transform_mat[2][2])))
     
     return warped_img, warped_mtx
 
+
 def get_features(img, matrix):
-    warped_img, warped_mtx = warp_image(img, matrix)
+    gray = np.uint8(255 * rgb2gray(img))
+    normalized = np.zeros(gray.shape)
+    normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
+    features = np.zeros((8, 8))
+    # plot = np.stack((normalized,) * 3, axis=-1)
     for i in range(8):
         for j in range(8):
             p1 = matrix[i, j, :]
             p2 = matrix[i, j+1, :]
             p3 = matrix[i+1, j, :]
             p4 = matrix[i+1, j+1, :]
-            center = (p1 + p2 + p3 + p4) / 4
+            center = np.uint32(np.average([p1, p2, p3, p4], axis=0))
 
-            (np.abs(p1 - center) + np.abs(p2 - center) + np.abs(p3 - center) + np.abs(p4 - center)) / 4
+            feat_sz = np.uint32(0.55 * (np.abs(p1 - center) + np.abs(p2 - center) + np.abs(p3 - center) + np.abs(p4 - center)) // 4)
+
+            features[i, j] = np.average(normalized[center[0] - feat_sz[0] : center[0] + feat_sz[0], center[1] - feat_sz[1] : center[1] + feat_sz[1]])
+
+            # points = np.array([
+            #     [center[0] - feat_sz[0], center[1] - feat_sz[1]],
+            #     [center[0] - feat_sz[0], center[1] + feat_sz[1]],
+            #     [center[0] + feat_sz[0], center[1] - feat_sz[1]],
+            #     [center[0] + feat_sz[0], center[1] + feat_sz[1]]
+            # ])
+
+            # plot = plot_points(plot, points)
+
+    return features
+
+
 
 def get_board_corners(img):
     lines = get_lines(img)
     if lines is not None:
-        plot = plot_lines(img, lines)
+        lines, horizontals, verticals = separate_lines(lines)
         lines = combine_lines(lines)
         lines, horizontals, verticals = separate_lines(lines)
         intersections = get_intersection_points(horizontals, verticals)
         intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
-        # corners = cluster_points(intersections)
         intersection_matrix = get_intersection_matrix(intersections)
-        # features = get_features(img, intersection_matrix)
-        plot = plot_points(plot_lines(plot, lines, color=(255, 255, 255)), intersections)
-        # warped_img, warped_mtx = warp_image(img, intersection_matrix)
-        # plot = plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
+        return intersection_matrix
+    return None
+
+
+def get_board_state(img):
+    intersection_matrix = get_board_corners(img)
+    warped_img, warped_mtx = warp_image(img, intersection_matrix)
+    if intersection_matrix is not None:
+        warped_img, warped_mtx = warp_image(img, intersection_matrix)
+        features = get_features(warped_img, warped_mtx)
+        # if calibration_feats is None:
+        #     calibration_feats = features
+    # if diff_threshold is None:
+    #     pass
+        plot = plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
+        print(features)
         return plot
     return None
+
+
+def get_img_comparison(img):
+    return np.zeros((8, 8))
