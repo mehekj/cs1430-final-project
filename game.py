@@ -63,6 +63,11 @@ class Board:
         self.turn = Turn.WHITE
         self.verify_board()
 
+    def get_fen_for_new_state(self, input_board):
+        self.calculate_difference(input_board)
+        self.verify_board()
+        return self.board_to_fen()
+
     def calculate_difference(self, input_filled_or_not):
         has_piece_been_taken = np.sum(self.filled_board) - np.sum(input_filled_or_not)
         if has_piece_been_taken==0:
@@ -113,7 +118,6 @@ class Board:
             self.turn = Turn.BLACK
         else:
             self.turn = Turn.WHITE
-        self.verify_board()
 
     def print_board(self):
         print(self.board)
