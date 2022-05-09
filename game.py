@@ -5,6 +5,7 @@ from ast import Assert
 from enum import Enum
 import numpy as np
 
+
 class Turn(Enum):
     WHITE = 1
     BLACK = 2

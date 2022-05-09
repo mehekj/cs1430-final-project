@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 import imgprocess
 import game
+from chessboard import display
+import chess
 
 '''
 RUN THIS FILE
@@ -15,8 +17,11 @@ handles IMG CAPTURE and USER CONTROLS
 vid = cv2.VideoCapture(0)
 last_cap = None
 edges = None
+my_board = game.Board()
+board = chess.Board()
+display.start(board.fen())
   
-while(True):
+while not display.checkForQuit():
     # read live video feed
     _, frame = vid.read()
     # frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
@@ -46,6 +51,13 @@ while(True):
     elif key == ord(' '):
         last_cap = imgprocess.get_lines(frame)
 
+# this should return a FEN string
+    # my_board.calculate_difference() 
+# this should update based on the returned FEN
+    board.set_board_fen('rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R')
+    display.update(board.fen())
+
 # quit program release cap obj and destroy windows
 vid.release()
 cv2.destroyAllWindows()
+display.terminate()
