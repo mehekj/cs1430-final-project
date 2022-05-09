@@ -75,12 +75,13 @@ class ImageProcess:
                 horizontals.append(line)
         return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
-    # takes the best 18 distinct lines from many overlapping
-    def combine_lines(self, lines, n, rho_threshold=50, theta_threshold=np.pi / 6):
+    # takes the best n distinct lines from many overlapping
+    def combine_lines(self, lines, n, rho_threshold=60, theta_threshold=np.pi / 3):
         best_lines = np.zeros((n, 2))
         count = 0
         for i in range(lines.shape[0]):
             rho = lines[i][0]
+            lines[i][1] %= np.pi
             theta = lines[i][1]
             if i == 0:
                 best_lines[count] = lines[i]
@@ -89,14 +90,17 @@ class ImageProcess:
                 if rho < 0:
                     rho *= -1
                     lines[i][0] *= -1
-                    theta -= np.pi
-                    lines[i][1] -= np.pi
+                    # theta -= np.pi
+                    # lines[i][1] -= np.pi
                 closeness_rho = np.isclose(rho, best_lines[0:count, 0], atol=rho_threshold)
-                closeness_theta = np.isclose(theta, best_lines[0:count, 1], atol=theta_threshold)
-                closeness = np.all([closeness_rho, closeness_theta], axis=0)
-                if not any(closeness) and count < best_lines.shape[0]:
+                # closeness_theta = np.isclose(theta, best_lines[0:count, 1], atol=theta_threshold)
+                # closeness = np.all([closeness_rho, closeness_theta], axis=0)
+                # closeness = np.all([closeness_theta], axis=0)
+                if not any(closeness_rho) and count < best_lines.shape[0]:
                     best_lines[count] = lines[i]
                     count += 1
+
+        print(best_lines)
 
         return best_lines
 
@@ -220,7 +224,9 @@ class ImageProcess:
             # lines = self.combine_lines(lines, 18)
             # lines, horizontals, verticals = self.separate_lines(lines)
             intersections = self.get_intersection_points(horizontals, verticals)
-            intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
+            # intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
+            plot = self.plot_points(self.plot_lines(self.plot_lines(img, verticals), horizontals), intersections)
+            return plot
             intersection_matrix = self.get_intersection_matrix(intersections)
             return intersection_matrix
         return None
@@ -228,6 +234,7 @@ class ImageProcess:
 
     def get_board_state(self, img):
         intersection_matrix = self.get_board_corners(img)
+        return intersection_matrix
         if intersection_matrix is not None:
             warped_img, warped_mtx = self.warp_image(img, intersection_matrix)
             features = self.get_features(warped_img, warped_mtx)
