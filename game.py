@@ -4,6 +4,7 @@ handles the game logic and producing the logs
 from ast import Assert
 from enum import Enum
 import numpy as np
+import io
 
 
 class Turn(Enum):
@@ -24,6 +25,21 @@ class Piece(Enum):
     BB = 10
     BN = 11
     BP = 12
+    
+piece_chars = {
+    Piece.WK: 'K',
+    Piece.WQ: 'Q',
+    Piece.WR: 'R',
+    Piece.WB: 'B',
+    Piece.WN: 'N',
+    Piece.WP: 'P',
+    Piece.BK: 'k',
+    Piece.BQ: 'q',
+    Piece.BB: 'b',
+    Piece.BR: 'r',
+    Piece.BN: 'n',
+    Piece.BP: 'p'
+}
 
 class Board:
     def __init__(self) -> None:
@@ -99,7 +115,7 @@ class Board:
             self.turn = Turn.WHITE
         self.verify_board()
 
-    def display_board(self):
+    def print_board(self):
         print(self.board)
 
     def verify_board(self):
@@ -113,4 +129,29 @@ class Board:
                 elif current_piece==Piece.BK or current_piece==Piece.BQ or current_piece==Piece.BR or current_piece==Piece.BB or current_piece==Piece.BN or current_piece==Piece.BP:
                     Assert(self.filled_board[i][j]==2)
         print("Board seems good!")
-        self.display_board()
+        self.print_board()
+
+# https://stackoverflow.com/questions/56754543/generate-chess-board-diagram-from-an-array-of-positions-in-python
+
+    def board_to_fen(self):
+        # Use StringIO to build string more efficiently than concatenating
+        with io.StringIO() as s:
+            for row in self.board:
+                empty = 0
+                for cell in row:
+                    c = int(cell)
+                    if not c==0:
+                        if empty > 0:
+                            s.write(str(empty))
+                            empty = 0
+                        s.write(piece_chars[cell])
+                    else:
+                        empty += 1
+                if empty > 0:
+                    s.write(str(empty))
+                s.write('/')
+            # Move one position back to overwrite last '/'
+            s.seek(s.tell() - 1)
+            # If you do not have the additional information choose what to put
+            s.write(' w KQkq - 0 1')
+            return s.getvalue()
