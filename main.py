@@ -12,9 +12,10 @@ handles IMG CAPTURE and USER CONTROLS
 '''
   
 # define a video capture object
-vid = cv2.VideoCapture(1)
+vid = cv2.VideoCapture(0)
 last_cap = None
 edges = None
+processor = imgprocess.ImageProcess()
   
 while(True):
     _, frame = vid.read() # read live video feed
@@ -49,7 +50,7 @@ while(True):
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        last_cap = imgprocess.get_board_state(frame)
+        last_cap = processor.get_board_state(frame)
     # save img
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
