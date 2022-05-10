@@ -5,6 +5,8 @@ import matplotlib.pyplot as plt
 
 import imgprocess
 import game
+from chessboard import display
+import chess
 
 '''
 RUN THIS FILE
@@ -16,11 +18,14 @@ vid = cv2.VideoCapture(0)
 filled_plot = None
 line_plot = None
 edges = None
+my_board = game.Board()
+board = chess.Board()
+display.start(board.fen())
 processor = imgprocess.ImageProcess()
   
-while(True):
+while not display.checkForQuit():
     _, frame = vid.read() # read live video feed
-    # frame = np.flip(io.imread('savetest.jpg'), axis=-1) # our board
+    # frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
 
     if frame is None:
         print("no camera input")
@@ -58,6 +63,13 @@ while(True):
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
 
+# this should return a FEN string
+    # my_board.calculate_difference() 
+# this should update based on the returned FEN
+    board.set_board_fen('rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R')
+    display.update(board.fen())
+
 # quit program release cap obj and destroy windows
 vid.release()
 cv2.destroyAllWindows()
+display.terminate()
