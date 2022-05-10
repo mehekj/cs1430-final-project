@@ -35,6 +35,8 @@ class ImageProcess:
         self.calibration_feats = None
         self.diff_threshold = None
         self.calibration_img = None
+        self.last_avg_intensity = None
+        self.last_num_piece = 32
 
     # gets intersections between two lines
     def get_line_intersection(self, line1, line2):
@@ -76,7 +78,7 @@ class ImageProcess:
         return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
     # takes the best 18 distinct lines from many overlapping
-    def combine_lines(self, lines, n, rho_threshold=50, theta_threshold=np.pi / 6):
+    def combine_lines(self, lines, n, rho_threshold=30, theta_threshold=np.pi / 6):
         best_lines = np.zeros((n, 2))
         count = 0
         for i in range(lines.shape[0]):
@@ -164,8 +166,6 @@ class ImageProcess:
         warped_mtx = np.zeros((9, 9, 2))
         for i in range(9):
             for j in range(9):
-                # print(np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0))
-                # warped_mtx[i, j, :] = np.delete(np.reshape(np.matmul(transform_mat, np.reshape(np.pad(matrix[i, j, :], (0, 1)), (3, 1))), (3)), 2, 0)
                 p = matrix[i, j]
                 warped_mtx[i, j, 0] = int((transform_mat[0][0] * p[0] + transform_mat[0][1] * p[1] + transform_mat[0][2]) / ((transform_mat[2][0] * p[0] + transform_mat[2][1] * p[1] + transform_mat[2][2])))
                 warped_mtx[i, j, 1] = int((transform_mat[1][0] * p[0] + transform_mat[1][1] * p[1] + transform_mat[1][2]) / ((transform_mat[2][0] * p[0] + transform_mat[2][1] * p[1] + transform_mat[2][2])))
@@ -178,6 +178,7 @@ class ImageProcess:
         normalized = np.zeros(gray.shape)
         normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
         features = np.zeros((8, 8))
+        avg_intensities = np.zeros((8, 8, 3))
         # plot = np.stack((normalized,) * 3, axis=-1)
         for i in range(8):
             for j in range(8):
@@ -193,21 +194,12 @@ class ImageProcess:
                 blurred = cv2.blur(area, (3, 3))
                 edges = cv2.Canny(blurred, 50, 100)
 
-                # plot = np.stack((cv2.resize(edges, (img.shape[0], img.shape[1])),) * 3, axis=-1)
-                # return plot
-
                 features[i, j] = np.sum(edges)
+                avg_intensities[i, j, 0] = np.average(img[center[0] - feat_sz[0] : center[0] + feat_sz[0], center[1] - feat_sz[1] : center[1] + feat_sz[1], 0])
+                avg_intensities[i, j, 1] = np.average(img[center[0] - feat_sz[0] : center[0] + feat_sz[0], center[1] - feat_sz[1] : center[1] + feat_sz[1], 1])
+                avg_intensities[i, j, 2] = np.average(img[center[0] - feat_sz[0] : center[0] + feat_sz[0], center[1] - feat_sz[1] : center[1] + feat_sz[1], 2])
 
-                # points = np.array([
-                #     [center[0] - feat_sz[0], center[1] - feat_sz[1]],
-                #     [center[0] - feat_sz[0], center[1] + feat_sz[1]],
-                #     [center[0] + feat_sz[0], center[1] - feat_sz[1]],
-                #     [center[0] + feat_sz[0], center[1] + feat_sz[1]]
-                # ])
-
-                # plot = plot_points(plot, points)
-
-        return features
+        return features, avg_intensities
 
 
 
@@ -217,8 +209,7 @@ class ImageProcess:
             lines, horizontals, verticals = self.separate_lines(lines)
             horizontals = self.combine_lines(horizontals, 9)
             verticals = self.combine_lines(verticals, 9)
-            # lines = self.combine_lines(lines, 18)
-            # lines, horizontals, verticals = self.separate_lines(lines)
+            # return self.plot_lines(self.plot_lines(img, verticals), horizontals)
             intersections = self.get_intersection_points(horizontals, verticals)
             intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
             intersection_matrix = self.get_intersection_matrix(intersections)
@@ -228,9 +219,11 @@ class ImageProcess:
 
     def get_board_state(self, img):
         intersection_matrix = self.get_board_corners(img)
+        # return intersection_matrix
         if intersection_matrix is not None:
             warped_img, warped_mtx = self.warp_image(img, intersection_matrix)
-            features = self.get_features(warped_img, warped_mtx)
+            print(warped_mtx)
+            features, avg_intensities = self.get_features(warped_img, warped_mtx)
             if self.calibration_feats is None:
                 self.calibration_feats = features
                 plot = self.plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
@@ -239,25 +232,57 @@ class ImageProcess:
                 diffs = np.abs(self.calibration_feats - features)
                 filled = np.zeros(features.shape)
                 filled[diffs > self.diff_threshold] = 1
-                plot = self.plot_squares(filled, img, intersection_matrix)
+                plot = self.plot_squares(filled, warped_img, warped_mtx)
+                self.last_num_piece = np.sum(filled)
+                self.last_avg_intensity = avg_intensities
             else:
                 diffs = np.abs(self.calibration_feats - features)
                 filled = np.zeros(features.shape)
                 filled[diffs > self.diff_threshold] = 1
-                plot = self.plot_squares(filled, img, intersection_matrix)
+                plot = self.plot_squares(filled, warped_img, warped_mtx)
+                gray = np.uint8(255 * rgb2gray(warped_img))
+                normalized = np.zeros(gray.shape)
+                normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
+                captured_x, captured_y = self.check_piece_diff(filled, avg_intensities)
+                # print(filled)
+                print(captured_x, captured_y)
+                self.last_num_piece = np.sum(filled)
+                self.last_avg_intensity = avg_intensities
             return plot
         return None
 
     
     def plot_squares(self, filled, img, matrix):
+        print(matrix)
         for i in range(8):
             for j in range(8):
                 if filled[i, j] == 1:
-                    cv2.rectangle(img, matrix[j, i], matrix[j + 1, i + 1], (0, 255, 0), thickness=1)
+                    cv2.rectangle(img, matrix[j, i], matrix[j + 1, i + 1], (0, 255, 0), thickness=2)
         return img
 
 
     def calibrate_threshold(self, features):
-        diffs = self.calibration_feats - features
-        diffs = np.sort(np.abs(diffs), axis=None)
-        return diffs[32]
+        # diffs = self.calibration_feats - features
+        # diffs = np.sort(np.abs(diffs), axis=None)
+        # return diffs[3]
+        return 0
+
+    def check_piece_diff(self, filled, curr_intensities):
+        if np.sum(filled) < self.last_num_piece:
+            max_diff = 0
+            captured_x = -1
+            captured_y = -1
+
+            for i in range(8):
+                for j in range(8):
+                    if filled[i, j] == 1:
+                        diff = np.sum(np.abs(curr_intensities[i, j] - self.last_avg_intensity[i, j]))
+                        if diff > max_diff:
+                            captured_x = i
+                            captured_y = j
+                            max_diff = diff
+
+            return captured_x, captured_y
+
+        else:
+            return -1, -1
