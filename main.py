@@ -1,3 +1,4 @@
+from tkinter import filedialog
 import cv2
 import numpy as np
 from skimage import io
@@ -58,15 +59,17 @@ while not display.checkForQuit():
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        filled_plot, line_plot = processor.get_board_state(frame)
+        filled_board, captured_x, captured_y, filled_plot, line_plot = processor.get_board_state(frame)
+    # this should return a FEN string
+        FEN = my_board.get_fen_for_new_state(filled_board, captured_x, captured_y)
+        print(board.fen())
+    # this should update based on the returned FEN
+        board.set_board_fen(FEN)
+
     # save img
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
 
-# this should return a FEN string
-    # my_board.calculate_difference() 
-# this should update based on the returned FEN
-    board.set_board_fen('rnbqkbnr/pp1ppppp/8/2p5/4P3/5N2/PPPP1PPP/RNBQKB1R')
     display.update(board.fen())
 
 # quit program release cap obj and destroy windows

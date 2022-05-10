@@ -71,6 +71,7 @@ class Board:
     input_board - a 2d array of 1's and 0's that represents what the camera sees as filled in or not
     '''
     def get_fen_for_new_state(self, input_board, captured_x, captured_y):
+        input_board = np.flip(np.rot90(input_board, k=3), axis=1)
         self.calculate_difference(input_board, captured_x, captured_y)
         self.verify_board()
         return self.board_to_fen()
@@ -79,18 +80,17 @@ class Board:
     calculates the difference between the old board and the new board
     '''
     def calculate_difference(self, input_filled_or_not, captured_x, captured_y):
-        has_piece_been_taken = np.sum(self.filled_board) - np.sum(input_filled_or_not)
-        if has_piece_been_taken==0:
+        if captured_x==-1:
             # no piece taken
             differences = input_filled_or_not - self.filled_board
             for i in range(8):
                 for j in range(8):
-                    # If the old square was empty but now was filled, differences is 1 or 2
-                    if differences[i][j] == 1 or differences[i][j] == 2:
+                    # If the old square was empty but now was filled, differences is 1
+                    if differences[i][j] == 1:
                         x_new = i
                         y_new = j
-                    if differences[i][j] < 0:
-                        # If the old square was filled but now is empty, difference is -1 or -2
+                    if differences[i][j]==-1:
+                        # If the old square was filled but now is empty, difference is -1
                         x_old = i
                         y_old = j
         else:
@@ -100,8 +100,8 @@ class Board:
             differences = input_filled_or_not - self.filled_board
             for i in range(8):
                 for j in range(8):
-                    if differences[i][j] < 0:
-                        # If the old square was filled but now is empty, difference is -1 or -2
+                    if differences[i][j]==-1:
+                        # If the old square was filled but now is empty, difference is -1
                         x_old = i
                         y_old = j
         # Run updates
@@ -158,7 +158,7 @@ class Board:
             for row in self.board:
                 empty = 0
                 for cell in row:
-                    c = int(cell)
+                    c = cell.value
                     if not c==0:
                         if empty > 0:
                             s.write(str(empty))
@@ -172,5 +172,6 @@ class Board:
             # Move one position back to overwrite last '/'
             s.seek(s.tell() - 1)
             # If you do not have the additional information choose what to put
-            s.write(' w KQkq - 0 1')
+            s.write(' ')
+            # s.write(' w KQkq - 0 1')
             return s.getvalue()

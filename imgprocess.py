@@ -234,16 +234,17 @@ class ImageProcess:
             gray = np.uint8(255 * rgb2gray(warped_img))
             normalized = np.zeros(gray.shape)
             normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
-            captured_x, captured_y = None, None
+            captured_x, captured_y = -1, -1
             if self.last_avg_intensity is not None:
-                self.check_piece_diff(filled, avg_intensities)
+                captured_x, captured_y = self.check_piece_diff(filled, avg_intensities)
             self.last_num_piece = np.sum(filled)
             self.last_avg_intensity = avg_intensities
-            return filled_plot, line_plot
+            return filled, captured_x, captured_y, filled_plot, line_plot
         return None
 
     
     def plot_squares(self, filled, img, matrix):
+        matrix = np.where(matrix < 0, 0, matrix)
         for i in range(8):
             for j in range(8):
                 if filled[i, j] == 1:
