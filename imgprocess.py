@@ -76,7 +76,7 @@ class ImageProcess:
         return np.array(horizontals + verticals), np.array(horizontals), np.array(verticals)
 
     # takes the best 18 distinct lines from many overlapping
-    def combine_lines(self, lines, n, rho_threshold=30, theta_threshold=np.pi / 6):
+    def combine_lines(self, lines, n, rho_threshold=40, theta_threshold=np.pi / 6):
         best_lines = np.zeros((n, 2))
         count = 0
         for i in range(lines.shape[0]):
