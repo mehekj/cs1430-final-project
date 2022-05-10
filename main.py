@@ -20,13 +20,19 @@ edges = None
 my_board = game.Board()
 board = chess.Board()
 display.start(board.fen())
+processor = imgprocess.ImageProcess()
   
 while not display.checkForQuit():
-    # read live video feed
-    _, frame = vid.read()
+    _, frame = vid.read() # read live video feed
     # frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
 
+    if frame is None:
+        print("no camera input")
+        break
+
     # crop to square
+    cropx = 0
+    cropy = 0
     if frame.shape[1] > frame.shape[0]:
         cropx = int((frame.shape[1] - frame.shape[0])/2)
         cropy = 0
@@ -49,7 +55,10 @@ while not display.checkForQuit():
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        last_cap = imgprocess.get_lines(frame)
+        last_cap = processor.get_board_state(frame)
+    # save img
+    elif key == ord('s'):
+        cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))
 
 # this should return a FEN string
     # my_board.calculate_difference() 
