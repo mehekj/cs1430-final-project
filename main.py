@@ -13,7 +13,8 @@ handles IMG CAPTURE and USER CONTROLS
   
 # define a video capture object
 vid = cv2.VideoCapture(0)
-last_cap = None
+filled_plot = None
+line_plot = None
 edges = None
 processor = imgprocess.ImageProcess()
   
@@ -38,8 +39,10 @@ while(True):
   
     # adds processed captured photo to window next to live cam feed
     new_frame = frame
-    if last_cap is not None:
-        new_frame = np.hstack((frame, last_cap))
+    if line_plot is not None:
+        new_frame = np.hstack((new_frame, line_plot))
+    if filled_plot is not None:
+        new_frame = np.hstack((new_frame, filled_plot))
         
     # displays frame
     cv2.imshow('live', new_frame)
@@ -50,7 +53,7 @@ while(True):
         break
     # captures photo and gets processed plot
     elif key == ord(' '):
-        last_cap = processor.get_board_state(frame)
+        filled_plot, line_plot = processor.get_board_state(frame)
     # save img
     elif key == ord('s'):
         cv2.imwrite('savetest.jpg', cv2.resize(frame, (720, 720)))

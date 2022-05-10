@@ -32,9 +32,7 @@ return matrix of 0,1,2 to main.py to pass to game
 
 class ImageProcess:
     def __init__(self):
-        self.calibration_feats = None
-        self.diff_threshold = None
-        self.calibration_img = None
+        self.diff_threshold = 0
         self.last_avg_intensity = None
         self.last_num_piece = 32
 
@@ -102,12 +100,6 @@ class ImageProcess:
 
         return best_lines
 
-    # uses kmeans to find corner cluster centers (did not work)
-    def cluster_points(self, intersections):
-        features = np.array(intersections)
-        kmeans = MiniBatchKMeans(n_clusters=81, max_iter=500).fit(features)
-        return np.ndarray.tolist(kmeans.cluster_centers_)
-
     # gets hough lines from image
     def get_lines(self, img):
         # convert to grayscale, blur, then get canny edges
@@ -131,7 +123,7 @@ class ImageProcess:
             y0 = b * rho
             pt1 = (int(x0 + 1000*(-b)), int(y0 + 1000*(a)))
             pt2 = (int(x0 - 1000*(-b)), int(y0 - 1000*(a)))
-            cv2.line(img, pt1, pt2, color, 1, cv2.LINE_AA)
+            cv2.line(img, pt1, pt2, color, 2, cv2.LINE_AA)
         
         return img
 
@@ -213,59 +205,51 @@ class ImageProcess:
             intersections = self.get_intersection_points(horizontals, verticals)
             intersections = np.array(list(filter(lambda point : point[0] >= 0 and point[0] < img.shape[1] and point[1] >= 0 and point[1] < img.shape[0], intersections)))
             intersection_matrix = self.get_intersection_matrix(intersections)
-            return intersection_matrix
+            return intersection_matrix, self.plot_points(self.plot_lines(self.plot_lines(self.plot_lines(img, lines, (255, 255, 255)), verticals), horizontals), intersections)
         return None
 
 
     def get_board_state(self, img):
-        intersection_matrix = self.get_board_corners(img)
-        # return intersection_matrix
+        intersection_matrix, line_plot = self.get_board_corners(img)
         if intersection_matrix is not None:
             warped_img, warped_mtx = self.warp_image(img, intersection_matrix)
-            print(warped_mtx)
             features, avg_intensities = self.get_features(warped_img, warped_mtx)
-            if self.calibration_feats is None:
-                self.calibration_feats = features
-                plot = self.plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
-            elif self.diff_threshold is None:
-                self.diff_threshold = self.calibrate_threshold(features)
-                diffs = np.abs(self.calibration_feats - features)
-                filled = np.zeros(features.shape)
-                filled[diffs > self.diff_threshold] = 1
-                plot = self.plot_squares(filled, warped_img, warped_mtx)
-                self.last_num_piece = np.sum(filled)
-                self.last_avg_intensity = avg_intensities
-            else:
-                diffs = np.abs(self.calibration_feats - features)
-                filled = np.zeros(features.shape)
-                filled[diffs > self.diff_threshold] = 1
-                plot = self.plot_squares(filled, warped_img, warped_mtx)
-                gray = np.uint8(255 * rgb2gray(warped_img))
-                normalized = np.zeros(gray.shape)
-                normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
-                captured_x, captured_y = self.check_piece_diff(filled, avg_intensities)
-                # print(filled)
-                print(captured_x, captured_y)
-                self.last_num_piece = np.sum(filled)
-                self.last_avg_intensity = avg_intensities
-            return plot
+            # if self.calibration_feats is None:
+            #     self.calibration_feats = features
+            #     plot = self.plot_points(warped_img, np.reshape(warped_mtx, (-1, 2)))
+            # elif self.diff_threshold is None:
+            #     self.diff_threshold = self.calibrate_threshold(features)
+            #     diffs = np.abs(self.calibration_feats - features)
+            #     filled = np.zeros(features.shape)
+            #     filled[diffs > self.diff_threshold] = 1
+            #     plot = self.plot_squares(filled, warped_img, warped_mtx)
+            #     self.last_num_piece = np.sum(filled)
+            #     self.last_avg_intensity = avg_intensities
+            # else:
+            # diffs = np.abs(self.calibration_feats - features)
+            diffs = features
+            filled = np.zeros(features.shape)
+            filled[diffs > self.diff_threshold] = 1
+            filled_plot = self.plot_squares(filled, warped_img, warped_mtx)
+            gray = np.uint8(255 * rgb2gray(warped_img))
+            normalized = np.zeros(gray.shape)
+            normalized = cv2.normalize(gray, normalized, 0, 255, cv2.NORM_MINMAX)
+            captured_x, captured_y = None, None
+            if self.last_avg_intensity is not None:
+                self.check_piece_diff(filled, avg_intensities)
+            self.last_num_piece = np.sum(filled)
+            self.last_avg_intensity = avg_intensities
+            return filled_plot, line_plot
         return None
 
     
     def plot_squares(self, filled, img, matrix):
-        print(matrix)
         for i in range(8):
             for j in range(8):
                 if filled[i, j] == 1:
-                    cv2.rectangle(img, matrix[j, i], matrix[j + 1, i + 1], (0, 255, 0), thickness=2)
+                    cv2.rectangle(img, np.uint32(matrix[j, i]), np.uint32(matrix[j + 1, i + 1]), (0, 255, 0), thickness=2)
+                    print(np.uint8(matrix[j, i]), np.uint8(matrix[j + 1, i + 1]))
         return img
-
-
-    def calibrate_threshold(self, features):
-        # diffs = self.calibration_feats - features
-        # diffs = np.sort(np.abs(diffs), axis=None)
-        # return diffs[3]
-        return 0
 
     def check_piece_diff(self, filled, curr_intensities):
         if np.sum(filled) < self.last_num_piece:
