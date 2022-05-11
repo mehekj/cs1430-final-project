@@ -26,7 +26,6 @@ processor = imgprocess.ImageProcess()
   
 while not display.checkForQuit():
     _, frame = vid.read() # read live video feed
-    # frame = np.flip(io.imread('test.jpeg'), axis=-1) # to use test image comment prev line and uncomment this
 
     if frame is None:
         print("no camera input")
